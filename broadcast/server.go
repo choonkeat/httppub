@@ -120,12 +120,17 @@ func publishRequest(requestid string, targets []url.URL, timeout time.Duration,
 				RawQuery: r.URL.RawQuery,
 			})
 
+			resultMethod := r.Method
+			if m := target.Query().Get("Method"); m != "" {
+				resultMethod = m
+			}
+
 			var err error
 			defer func() {
-				log.Printf(requestid+": \t[%d took] %07.4fs - %d - %s (%#v)", i, time.Since(start).Seconds(), statusCode, resultURL.String(), err)
+				log.Printf(requestid+": \t[%d took] %07.4fs - %d - %s %s (%#v)", i, time.Since(start).Seconds(), statusCode, resultMethod, resultURL.String(), err)
 			}()
 
-			log.Printf(requestid+": %s %s", r.Method, resultURL)
+			log.Printf(requestid+": %s %s", resultMethod, resultURL)
 			file, err := os.Open(tmpfile)
 			if err != nil {
 				statusCode = http.StatusBadGateway
@@ -137,7 +142,7 @@ func publishRequest(requestid string, targets []url.URL, timeout time.Duration,
 			defer file.Close()
 
 			// send request to target url with content of file as payload
-			req, err := http.NewRequest(r.Method, resultURL.String(), file)
+			req, err := http.NewRequest(resultMethod, resultURL.String(), file)
 			if err != nil {
 				statusCode = http.StatusBadRequest
 				if primary {

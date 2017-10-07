@@ -21,6 +21,7 @@ type testServer struct {
 	expectedReqHost    string
 	expectedReqHeader  http.Header
 	expectedReqBody    []byte
+	expectedMethod     string
 	expectedRequestURI string
 	respStatus         int
 	respHeader         http.Header
@@ -29,6 +30,7 @@ type testServer struct {
 
 func (d *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	assert.Equal(d.t, d.expectedReqHost, r.Host, "request host")
+	assert.Equal(d.t, d.expectedMethod, r.Method, "request method")
 	assert.Equal(d.t, d.expectedRequestURI, r.RequestURI, fmt.Sprintf("requesturi of %s", d.name))
 	for k, v := range d.expectedReqHeader {
 		assert.Equal(d.t, v, r.Header[k], fmt.Sprintf("%s for %s", k, d.name))
@@ -76,6 +78,7 @@ func TestServer(t *testing.T) {
 		name:               "primary",
 		prefix:             "?X-Hello=Some+value",
 		expectedReqHeader:  http.Header{"X-Hello": []string{"Some value"}},
+		expectedMethod:     "POST",
 		expectedRequestURI: givenRequestURI + "?" + givenReqQuery,
 		respStatus:         200,
 		respHeader:         http.Header{"X-Reply": []string{"who's there?"}},
@@ -88,6 +91,7 @@ func TestServer(t *testing.T) {
 		&testServer{
 			prefix:             "/server/base?hello=world",
 			expectedReqHeader:  http.Header{},
+			expectedMethod:     "POST",
 			expectedRequestURI: "/server/base" + givenRequestURI + "?" + givenReqQuery,
 			respStatus:         201,
 			respHeader:         http.Header{"X-Reply": []string{"wrong respHeader"}},
@@ -96,6 +100,7 @@ func TestServer(t *testing.T) {
 		&testServer{
 			prefix:             "/server/base?hello=world#fixed",
 			expectedReqHeader:  http.Header{},
+			expectedMethod:     "POST",
 			expectedRequestURI: "/server/base?" + givenReqQuery,
 			respStatus:         201,
 			respHeader:         http.Header{"X-Reply": []string{"wrong respHeader"}},
@@ -104,6 +109,7 @@ func TestServer(t *testing.T) {
 		&testServer{
 			prefix:             "",
 			expectedReqHeader:  http.Header{},
+			expectedMethod:     "POST",
 			expectedRequestURI: givenRequestURI + "?" + givenReqQuery,
 			respStatus:         201,
 			respHeader:         http.Header{"X-Reply": []string{"wrong respHeader"}},
@@ -114,6 +120,7 @@ func TestServer(t *testing.T) {
 			expectedReqHeader: http.Header{
 				"X-Forwarded-Host": []string{"def.co.uk"},
 			},
+			expectedMethod:     "POST",
 			expectedRequestURI: givenRequestURI + "?" + givenReqQuery,
 			respStatus:         201,
 			respHeader:         http.Header{"X-Reply": []string{"wrong respHeader"}},
@@ -123,7 +130,17 @@ func TestServer(t *testing.T) {
 			prefix:             "?Host=abc.com",
 			expectedReqHost:    "abc.com",
 			expectedReqHeader:  http.Header{},
+			expectedMethod:     "POST",
 			expectedRequestURI: givenRequestURI + "?" + givenReqQuery,
+			respStatus:         201,
+			respHeader:         http.Header{"X-Reply": []string{"wrong respHeader"}},
+			respBody:           []byte(`wrong respBody`),
+		},
+		&testServer{
+			prefix:             "/server/base?Method=PATCH",
+			expectedReqHeader:  http.Header{},
+			expectedMethod:     "PATCH",
+			expectedRequestURI: "/server/base" + givenRequestURI + "?" + givenReqQuery,
 			respStatus:         201,
 			respHeader:         http.Header{"X-Reply": []string{"wrong respHeader"}},
 			respBody:           []byte(`wrong respBody`),
